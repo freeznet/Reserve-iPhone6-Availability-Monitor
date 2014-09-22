@@ -33,6 +33,8 @@ import re
 import copy
 import collections
 
+from google.appengine.api import mail
+
 # Constants
 iPhone6ModelsURL = "http://www.techwalls.com/differences-between-iphone-6-6-plus-models/"
 iPhone6AvailabilityURL = "https://reserve.cdn-apple.com/CA/en_CA/reserve/iPhone/availability.json"
@@ -58,6 +60,9 @@ iphone6Dictionary = {
     "MG9V2CL/A": "iPhone 6 Plus 64GB Silver Unlocked",
     "MG9R2CL/A": "iPhone 6 Plus 128GB Silver Unlocked"
 }
+
+targetStores = {"R121": 0, "R120": 0, "R208": 0, "R333": 0, "R464": 0}
+targetModels = {"MG3L2CL/A": 0, "MG3C2CL/A": 0}
 
 # Global variables for jinja environment
 template_dir = os.path.join(os.path.dirname(__file__), 'html_template')
@@ -111,6 +116,8 @@ class UpdateHandler(BasicHandler):
             phonesDictInThisStore = availabilityDict[storeID]
             phoneKeys = phonesDictInThisStore.keys()
             for eachPhoneKey in phoneKeys:
+                if (phonesDictInThisStore[eachPhoneKey] == True) and (eachPhoneKey in targetModels) and (storeID in targetStores):
+                    sendEmail(storeNameForStoreID(ontarioStoresList, storeID), eachPhoneKey)
                 if eachPhoneKey in iphone6Dictionary:
                     replaceKeyInDictionary(phonesDictInThisStore, eachPhoneKey, iphone6Dictionary[eachPhoneKey])
         
@@ -131,6 +138,9 @@ def replaceKeyInDictionary(dict, oldKey, newKey):
         value = dict[oldKey]
         dict.pop(oldKey)
         dict[newKey] = value
+
+def sendEmail(storeName, avaliableModel):
+    mail.send_mail("iPhone6 is available <zhh358@gmail.com>", "zhh358@gmail.com", "%(iphone)s is available in %(store)s" % {"iphone": iphone6Dictionary[avaliableModel], "store": storeName}, "iPhone6 is available")
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
