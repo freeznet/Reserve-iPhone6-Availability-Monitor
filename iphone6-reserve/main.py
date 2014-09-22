@@ -26,6 +26,27 @@ from google.appengine.api import memcache
 
 sys.path.insert(0, 'libs')
 import requests
+from requests import Request, Session
+from bs4 import BeautifulSoup
+import re
+import copy
+
+# Constants
+iPhone6ModelsURL = "http://www.techwalls.com/differences-between-iphone-6-6-plus-models/"
+iPhone6AvailabilityURL = "https://reserve.cdn-apple.com/CA/en_CA/reserve/iPhone/availability.json"
+appleStoreURL = "https://www.apple.com/autopush/ca/retail/storelist/stores.xml"
+
+iphone6Dictionary = {
+    "MG3D2CL/A": "iPhone 6 16GB Gold Unlocked",
+    "MG3L2CL/A": "iPhone 6 64GB Gold Unlocked",
+    "MG3G2CL/A": "iPhone 6 128GB Gold Unlocked",
+    "MG3A2CL/A": "iPhone 6 16GB Space Grey Unlocked",
+    "MG3H2CL/A": "iPhone 6 64GB Space Grey Unlocked",
+    "MG3E2CL/A": "iPhone 6 128GB Space Grey Unlocked",
+    "MG3C2CL/A": "iPhone 6 16GB Silver Unlocked",
+    "MG3K2CL/A": "iPhone 6 64GB Silver Unlocked",
+    "MG3F2CL/A": "iPhone 6 128GB Silver Unlocked"
+}
 
 # Global variables for jinja environment
 template_dir = os.path.join(os.path.dirname(__file__), 'html_template')
@@ -44,12 +65,28 @@ class BasicHandler(webapp2.RequestHandler):
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
 
+    def dumpJSON(self, dict):
+        self.response.headers['Content-Type'] = 'application/json'
+        self.write(json.dumps(dict))
+
 class MainHandler(BasicHandler):
     """Handle for '/' """
     def get(self):
         self.render('home.html')
         # PersonalInformationQuestClass.main()
 
+class UpdateHandler(BasicHandler):
+    """Handle for '/' """
+    def get(self):
+        session = Session()
+        response = session.get(iPhone6AvailabilityURL)
+        availabilityDict = json.loads(response.content)
+        # # for key, value in availabilityDict:
+        # #     if key in iphone6Dictionary:
+
+        self.dumpJSON(availabilityDict["R121"])
+
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainHandler),
+    ('/update', UpdateHandler)
 ], debug=True)
