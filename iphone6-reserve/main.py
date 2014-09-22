@@ -28,24 +28,35 @@ sys.path.insert(0, 'libs')
 import requests
 from requests import Request, Session
 from bs4 import BeautifulSoup
+import xmltodict
 import re
 import copy
+import collections
 
 # Constants
 iPhone6ModelsURL = "http://www.techwalls.com/differences-between-iphone-6-6-plus-models/"
 iPhone6AvailabilityURL = "https://reserve.cdn-apple.com/CA/en_CA/reserve/iPhone/availability.json"
-appleStoreURL = "https://www.apple.com/autopush/ca/retail/storelist/stores.xml"
+appleCAStoreURL = "https://www.apple.com/autopush/ca/retail/storelist/stores.xml"
 
 iphone6Dictionary = {
     "MG3D2CL/A": "iPhone 6 16GB Gold Unlocked",
-    "MG3L2CL/A": "iPhone 6 64GB Gold Unlocked",
+    "MG3L2CL/A": "iPhone 6 64GB Gold Unlocked", # target
     "MG3G2CL/A": "iPhone 6 128GB Gold Unlocked",
     "MG3A2CL/A": "iPhone 6 16GB Space Grey Unlocked",
     "MG3H2CL/A": "iPhone 6 64GB Space Grey Unlocked",
     "MG3E2CL/A": "iPhone 6 128GB Space Grey Unlocked",
     "MG3C2CL/A": "iPhone 6 16GB Silver Unlocked",
-    "MG3K2CL/A": "iPhone 6 64GB Silver Unlocked",
-    "MG3F2CL/A": "iPhone 6 128GB Silver Unlocked"
+    "MG3K2CL/A": "iPhone 6 64GB Silver Unlocked", # target
+    "MG3F2CL/A": "iPhone 6 128GB Silver Unlocked",
+    "MG9P2CL/A": "iPhone 6 Plus 16GB Gold Unlocked",
+    "MG9W2CL/A": "iPhone 6 Plus 64GB Gold Unlocked",
+    "MG9T2CL/A": "iPhone 6 Plus 128GB Gold Unlocked",
+    "MG9M2CL/A": "iPhone 6 Plus 16GB Space Grey Unlocked",
+    "MG9U2CL/A": "iPhone 6 Plus 64GB Space Grey Unlocked",
+    "MG9Q2CL/A": "iPhone 6 Plus 128GB Space Grey Unlocked",
+    "MG9N2CL/A": "iPhone 6 Plus 16GB Silver Unlocked",
+    "MG9V2CL/A": "iPhone 6 Plus 64GB Silver Unlocked",
+    "MG9R2CL/A": "iPhone 6 Plus 128GB Silver Unlocked"
 }
 
 # Global variables for jinja environment
@@ -79,12 +90,47 @@ class UpdateHandler(BasicHandler):
     """Handle for '/' """
     def get(self):
         session = Session()
-        response = session.get(iPhone6AvailabilityURL)
-        availabilityDict = json.loads(response.content)
-        # # for key, value in availabilityDict:
-        # #     if key in iphone6Dictionary:
+        availabilityJSON = session.get(iPhone6AvailabilityURL).content
+        availabilityDict = json.loads(availabilityJSON)
 
-        self.dumpJSON(availabilityDict["R121"])
+        caStoresXML = session.get(appleCAStoreURL).content
+        # self.write(caStoresXML)
+        storesDict = xmltodict.parse(caStoresXML)["records"]["country"]
+        # self.dumpJSON(storesDict)
+        ontarioStoresList = []
+        for eachStateDict in storesDict["state"]:
+            if eachStateDict["@name"] == "Ontario":
+                ontarioStoresList = eachStateDict["store"]
+        # self.dumpJSON(ontarioStoresList)
+        # self.write(storeNameForStoreID(ontarioStoresList, "R447"))
+
+        # # logging.info(availabilityDict)
+        lastUpdatedTimestamp = availabilityDict.pop("updated")
+        storeIDs = availabilityDict.keys()
+        for storeID in storeIDs:
+            phonesDictInThisStore = availabilityDict[storeID]
+            phoneKeys = phonesDictInThisStore.keys()
+            for eachPhoneKey in phoneKeys:
+                if eachPhoneKey in iphone6Dictionary:
+                    replaceKeyInDictionary(phonesDictInThisStore, eachPhoneKey, iphone6Dictionary[eachPhoneKey])
+        
+        for storeID in storeIDs:
+            replaceKeyInDictionary(availabilityDict, storeID, storeNameForStoreID(ontarioStoresList, storeID))
+
+        availabilityDict["_updated"] = lastUpdatedTimestamp    
+        orderedDict = collections.OrderedDict(sorted(availabilityDict.items()))
+        self.dumpJSON(orderedDict)
+
+def storeNameForStoreID(ontarioStoresList, storeID):
+    for eachStore in ontarioStoresList:
+        if eachStore["appleid"] == storeID:
+            return eachStore["name"]
+
+def replaceKeyInDictionary(dict, oldKey, newKey):
+    if oldKey in dict:
+        value = dict[oldKey]
+        dict.pop(oldKey)
+        dict[newKey] = value
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
