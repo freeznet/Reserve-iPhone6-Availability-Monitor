@@ -1,0 +1,6 @@
+cron:
+- description: Check check
+  url: /update.json
+  schedule: every 10 minutes from 0:05 to 23:59
+  timezone: Canada/Eastern
+  target: iphone6-reserve

@@ -144,5 +144,5 @@ def sendEmail(storeName, avaliableModel):
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
-    ('/update', UpdateHandler)
+    ('/update.json', UpdateHandler)
 ], debug=True)
