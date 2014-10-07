@@ -37,8 +37,8 @@ from google.appengine.api import mail
 
 # Constants
 iPhone6ModelsURL = "http://www.techwalls.com/differences-between-iphone-6-6-plus-models/"
-iPhone6AvailabilityURL = "https://reserve.cdn-apple.com/CA/en_CA/reserve/iPhone/availability.json"
-appleCAStoreURL = "https://www.apple.com/autopush/ca/retail/storelist/stores.xml"
+iPhone6AvailabilityURL = "https://reserve.cdn-apple.com/HK/en_HK/reserve/iPhone/availability.json"
+appleCAStoreURL = "https://www.apple.com/autopush/hk/retail/storelist/stores.xml"
 
 iphone6Dictionary = {
     "MG3D2CL/A": "iPhone 6 16GB Gold Unlocked",
@@ -102,10 +102,8 @@ class UpdateHandler(BasicHandler):
         # self.write(caStoresXML)
         storesDict = xmltodict.parse(caStoresXML)["records"]["country"]
         # self.dumpJSON(storesDict)
-        ontarioStoresList = []
-        for eachStateDict in storesDict["state"]:
-            if eachStateDict["@name"] == "Ontario":
-                ontarioStoresList = eachStateDict["store"]
+        hongkongStoresList = []
+        hongkongStoresList = storesDict["store"]
         # self.dumpJSON(ontarioStoresList)
         # self.write(storeNameForStoreID(ontarioStoresList, "R447"))
 
@@ -117,12 +115,12 @@ class UpdateHandler(BasicHandler):
             phoneKeys = phonesDictInThisStore.keys()
             for eachPhoneKey in phoneKeys:
                 if (phonesDictInThisStore[eachPhoneKey] == True) and (eachPhoneKey in targetModels) and (storeID in targetStores):
-                    sendEmail(storeNameForStoreID(ontarioStoresList, storeID), eachPhoneKey)
+                    sendEmail(storeNameForStoreID(hongkongStoresList, storeID), eachPhoneKey)
                 if eachPhoneKey in iphone6Dictionary:
                     replaceKeyInDictionary(phonesDictInThisStore, eachPhoneKey, iphone6Dictionary[eachPhoneKey])
         
         for storeID in storeIDs:
-            replaceKeyInDictionary(availabilityDict, storeID, storeNameForStoreID(ontarioStoresList, storeID))
+            replaceKeyInDictionary(availabilityDict, storeID, storeNameForStoreID(hongkongStoresList, storeID))
 
         availabilityDict["_updated"] = lastUpdatedTimestamp    
         orderedDict = collections.OrderedDict(sorted(availabilityDict.items()))
@@ -140,7 +138,7 @@ def replaceKeyInDictionary(dict, oldKey, newKey):
         dict[newKey] = value
 
 def sendEmail(storeName, avaliableModel):
-    mail.send_mail("iPhone6 is available <zhh358@gmail.com>", "zhh358@gmail.com", "%(iphone)s is available in %(store)s" % {"iphone": iphone6Dictionary[avaliableModel], "store": storeName}, "iPhone6 is available")
+    mail.send_mail("iPhone6 is available <freelz@gmail.com>", "freelz@gmail.com", "%(iphone)s is available in %(store)s" % {"iphone": iphone6Dictionary[avaliableModel], "store": storeName}, "iPhone6 is available")
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
